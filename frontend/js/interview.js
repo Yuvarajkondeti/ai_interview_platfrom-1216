@@ -1,59 +1,68 @@
-// Interview flow control - voice interaction and silence detection
-const BASE_URL = 'http://localhost:5000';
+// Interview flow control - voice interaction and SILENCE detection (audio-based)
 
-// Global variables
+// ================= GLOBALS =================
 let interviewId;
 let jobRole;
 let questionNumber = 1;
 let currentQuestionId;
+
 let recognition;
 let synthesis = window.speechSynthesis;
-let silenceTimer;
+
 let isListening = false;
 let userAnswer = "";
+
 const MAX_QUESTIONS = 10;
 
-// Initialize on page load
+// --- Audio-based silence detection ---
+let audioContext;
+let analyser;
+let microphone;
+let audioData;
+let silenceStart = null;
+
+const SILENCE_THRESHOLD = 0.02; // sensitivity (lower = more sensitive)
+const SILENCE_DURATION = 7000; // 7 seconds true silence
+
+// ================= INIT =================
 window.addEventListener('DOMContentLoaded', () => {
     init();
 });
 
 async function init() {
-    // Get interview data from sessionStorage
     interviewId = sessionStorage.getItem('interview_id');
     jobRole = sessionStorage.getItem('job_role');
 
     if (!interviewId || !jobRole) {
-        alert('Interview data not found. Redirecting to start page.');
+        alert('Interview data not found. Redirecting.');
         window.location.href = 'start_interview.html';
         return;
     }
 
-    // Setup speech recognition
     setupSpeechRecognition();
 
-    // Initialize AI overlay (emotion and posture detection)
     if (typeof initAIOverlay === 'function') {
         initAIOverlay();
     }
 
-    // Start interview - ask first question
     setTimeout(() => {
         askQuestion();
-    }, 2000); // Wait 2 seconds for setup
+    }, 2000);
 }
 
+// ================= SPEECH RECOGNITION =================
 function setupSpeechRecognition() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+        window.SpeechRecognition || window.webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
-        alert('Speech recognition not supported in this browser. Please use Chrome or Edge.');
+        alert('Speech recognition not supported. Use Chrome / Edge.');
         return;
     }
 
     recognition = new SpeechRecognition();
     recognition.continuous = true;
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.lang = 'en-US';
 
     recognition.onresult = handleSpeechResult;
@@ -61,8 +70,39 @@ function setupSpeechRecognition() {
     recognition.onerror = handleRecognitionError;
 }
 
+function handleSpeechResult(event) {
+    let finalTranscript = "";
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript + " ";
+        }
+    }
+
+    if (finalTranscript) {
+        userAnswer += finalTranscript;
+    }
+}
+
+function handleRecognitionEnd() {
+    if (isListening) {
+        try {
+            recognition.start();
+        } catch (e) {}
+    }
+}
+
+function handleRecognitionError(event) {
+    console.error("Speech error:", event.error);
+
+    if (event.error === "not-allowed") {
+        alert("Microphone permission denied.");
+        endInterview();
+    }
+}
+
+// ================= INTERVIEW FLOW =================
 async function askQuestion() {
-    // Check if we've reached max questions
     if (questionNumber > MAX_QUESTIONS) {
         await endInterview();
         return;
@@ -70,11 +110,9 @@ async function askQuestion() {
 
     try {
         const response = await fetch(`${BASE_URL}/api/interview/generate-question`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({
                 interview_id: interviewId,
                 job_role: jobRole,
@@ -88,30 +126,23 @@ async function askQuestion() {
             currentQuestionId = data.question_id;
             speakQuestion(data.question);
         } else {
-            // Handle errors
-            if (response.status === 503) {
-                alert('AI service unavailable. Please ensure Ollama is running locally.');
-            } else {
-                alert('Failed to generate question. Ending interview.');
-            }
+            alert("Failed to generate question.");
             await endInterview();
         }
     } catch (error) {
-        console.error('Failed to generate question:', error);
-        alert('Connection error. Ending interview.');
+        console.error(error);
         await endInterview();
     }
 }
 
-function speakQuestion(questionText) {
-    const utterance = new SpeechSynthesisUtterance(questionText);
-    utterance.rate = 0.9;  // Slightly slower for clarity
-    utterance.pitch = 1.0;
-    utterance.volume = 1.0;
-    utterance.lang = 'en-US';
+function speakQuestion(text) {
+    stopListening(); // safety
 
-    utterance.onend = function() {
-        // Wait 1 second, then start listening
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.9;
+    utterance.lang = "en-US";
+
+    utterance.onend = () => {
         setTimeout(() => {
             startListening();
         }, 1000);
@@ -120,173 +151,122 @@ function speakQuestion(questionText) {
     synthesis.speak(utterance);
 }
 
-function startListening() {
+// ================= LISTEN + SILENCE =================
+async function startListening() {
     isListening = true;
     userAnswer = "";
+    silenceStart = null;
 
     try {
         recognition.start();
-    } catch (e) {
-        console.error('Failed to start recognition:', e);
-        // If recognition is already started, continue
+    } catch (e) {}
+
+    await startAudioSilenceDetection();
+}
+
+async function startAudioSilenceDetection() {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioContext.createAnalyser();
+    analyser.fftSize = 2048;
+
+    microphone = audioContext.createMediaStreamSource(stream);
+    audioData = new Uint8Array(analyser.fftSize);
+
+    microphone.connect(analyser);
+
+    monitorAudioSilence();
+}
+
+function monitorAudioSilence() {
+    if (!isListening) return;
+
+    analyser.getByteTimeDomainData(audioData);
+
+    let sum = 0;
+    for (let i = 0; i < audioData.length; i++) {
+        let value = (audioData[i] - 128) / 128;
+        sum += value * value;
     }
 
-    startSilenceTimer();
-}
+    const volume = Math.sqrt(sum / audioData.length);
 
-function startSilenceTimer() {
-    clearTimeout(silenceTimer);
-
-    silenceTimer = setTimeout(() => {
-        if (isListening) {
+    if (volume < SILENCE_THRESHOLD) {
+        if (!silenceStart) silenceStart = Date.now();
+        if (Date.now() - silenceStart > SILENCE_DURATION) {
             stopListening();
+            return;
         }
-    }, 5000);  // 5 seconds of silence
-}
+    } else {
+        silenceStart = null;
+    }
 
-function handleSpeechResult(event) {
-    const transcript = event.results[event.results.length - 1][0].transcript;
-    userAnswer += transcript + " ";
-
-    // Reset silence timer (user is speaking)
-    startSilenceTimer();
+    requestAnimationFrame(monitorAudioSilence);
 }
 
 function stopListening() {
+    if (!isListening) return;
+
     isListening = false;
 
     try {
         recognition.stop();
-    } catch (e) {
-        console.error('Failed to stop recognition:', e);
+    } catch (e) {}
+
+    if (audioContext) {
+        audioContext.close();
+        audioContext = null;
     }
 
-    clearTimeout(silenceTimer);
-
-    // Save answer and continue
     saveAnswerAndContinue();
 }
 
+// ================= SAVE & NEXT =================
 async function saveAnswerAndContinue() {
-    // Trim answer
     let finalAnswer = userAnswer.trim();
-
-    // If answer is too short or empty, mark as "No response"
     if (!finalAnswer || finalAnswer.length < 5) {
         finalAnswer = "No response";
     }
 
     try {
         await fetch(`${BASE_URL}/api/interview/save-answer`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({
                 question_id: currentQuestionId,
                 answer_text: finalAnswer
             })
         });
-    } catch (error) {
-        console.error('Failed to save answer:', error);
-        // Don't block on save failure - continue interview
-    }
+    } catch (e) {}
 
-    // Increment question number
     questionNumber++;
-
-    // Ask next question
-    await askQuestion();
+    askQuestion();
 }
 
+// ================= END =================
 async function endInterview() {
-    // Stop all speech
     synthesis.cancel();
 
-    // Stop recognition if running
-    if (recognition) {
-        try {
-            recognition.stop();
-        } catch (e) {
-            console.error('Failed to stop recognition:', e);
-        }
-    }
+    try {
+        recognition.stop();
+    } catch (e) {}
 
-    // Stop AI overlay
-    if (typeof stopAIOverlay === 'function') {
+    if (typeof stopAIOverlay === "function") {
         stopAIOverlay();
     }
 
     try {
         await fetch(`${BASE_URL}/api/interview/end`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include',
-            body: JSON.stringify({
-                interview_id: interviewId
-            })
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ interview_id: interviewId })
         });
-    } catch (error) {
-        console.error('Failed to end interview:', error);
-    }
+    } catch (e) {}
 
-    // Show completion overlay
-    const overlay = document.createElement('div');
-    overlay.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0,0,0,0.9);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        z-index: 9999;
-        color: white;
-        font-size: 24px;
-        text-align: center;
-    `;
-    overlay.innerHTML = '<div>Interview completed!<br>Calculating your results...</div>';
-    document.body.appendChild(overlay);
-
-    // Redirect to previous interviews page after 3 seconds
     setTimeout(() => {
-        window.location.href = 'previous_interviews.html';
+        window.location.href = "previous_interviews.html";
     }, 3000);
-}
-
-function handleRecognitionEnd() {
-    // Recognition stopped unexpectedly
-    if (isListening) {
-        try {
-            recognition.start();  // Restart
-        } catch (e) {
-            console.error('Failed to restart recognition:', e);
-        }
-    }
-}
-
-function handleRecognitionError(event) {
-    console.error('Speech recognition error:', event.error);
-
-    if (event.error === 'no-speech') {
-        // No speech detected - this is fine, silence timer will handle
-    } else if (event.error === 'aborted') {
-        // Aborted - restart if still listening
-        if (isListening) {
-            try {
-                recognition.start();
-            } catch (e) {
-                console.error('Failed to restart after abort:', e);
-            }
-        }
-    } else if (event.error === 'not-allowed') {
-        // Mic permission denied
-        alert('Microphone permission denied. Cannot continue interview.');
-        endInterview();
-    }
 }

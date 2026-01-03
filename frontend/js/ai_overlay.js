@@ -1,5 +1,4 @@
 // AI Overlay - Emotion and Posture Detection
-const BASE_URL = 'http://localhost:5000';
 
 // Global variables
 let webcamStream;

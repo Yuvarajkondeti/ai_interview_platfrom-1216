@@ -1,9 +1,9 @@
 from flask import Flask
 from flask_cors import CORS
-from backend.database import init_db
+from database import init_db
 from auth import auth
 from interview_routes import interview
-from backend.emotion_api import emotion
+from emotion_api import emotion
 import os
 import secrets
 

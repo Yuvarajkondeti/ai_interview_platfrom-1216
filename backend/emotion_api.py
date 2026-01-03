@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify, session
 from functools import wraps
-from backend.database import get_db_connection
+from database import get_db_connection
 import cv2
 import numpy as np
 from deepface import DeepFace

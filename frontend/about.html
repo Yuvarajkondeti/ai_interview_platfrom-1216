@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - AI Interview Platform</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav id="navbar">
+        <div class="nav-brand">AI Interview</div>
+        <ul class="nav-menu">
+            <li><a href="home.html">Home</a></li>
+            <li><a href="start_interview.html">Start Interview</a></li>
+            <li><a href="about.html">About</a></li>
+            <li><a href="previous_interviews.html">Previous Interviews</a></li>
+            <li><a href="#" id="logoutLink" onclick="logout(); return false;">Logout</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div style="max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <h1 style="margin-bottom: 30px;">About AI Interview Platform</h1>
+
+            <section style="margin-bottom: 30px;">
+                <h2 style="color: #3498db; margin-bottom: 15px;">What We Do</h2>
+                <p style="line-height: 1.8; color: #555;">
+                    AI Interview Platform is a cutting-edge tool designed to help job seekers practice and improve their interview skills.
+                    Using advanced artificial intelligence, real-time emotion detection, and posture analysis, we provide comprehensive
+                    feedback to help you perform at your best during actual job interviews.
+                </p>
+            </section>
+
+            <section style="margin-bottom: 30px;">
+                <h2 style="color: #3498db; margin-bottom: 15px;">How It Works</h2>
+                <div style="line-height: 1.8; color: #555;">
+                    <p><strong>1. AI-Generated Questions:</strong> Our system uses Ollama/LLaMA to generate relevant interview questions
+                    tailored to your target job role.</p>
+
+                    <p><strong>2. Voice Interaction:</strong> Conduct realistic interviews using voice - speak naturally and the AI
+                    listens and responds just like a real interviewer.</p>
+
+                    <p><strong>3. Emotion Tracking:</strong> Using DeepFace technology, we detect and track your emotions in real-time,
+                    helping you understand how you come across during the interview.</p>
+
+                    <p><strong>4. Posture Analysis:</strong> MediaPipe Pose technology analyzes your body language and posture,
+                    providing feedback on your physical presence.</p>
+
+                    <p><strong>5. Automatic Flow Control:</strong> The interview flows naturally with automatic silence detection -
+                    no buttons to click, just like a real interview.</p>
+                </div>
+            </section>
+
+            <section style="margin-bottom: 30px;">
+                <h2 style="color: #3498db; margin-bottom: 15px;">Technology Stack</h2>
+                <div style="line-height: 1.8; color: #555;">
+                    <ul style="list-style-position: inside;">
+                        <li><strong>Backend:</strong> Flask (Python)</li>
+                        <li><strong>Frontend:</strong> HTML, CSS, JavaScript</li>
+                        <li><strong>Database:</strong> SQLite</li>
+                        <li><strong>AI:</strong> Ollama/LLaMA for question generation</li>
+                        <li><strong>Emotion Detection:</strong> DeepFace</li>
+                        <li><strong>Posture Analysis:</strong> MediaPipe Pose</li>
+                        <li><strong>Voice:</strong> Web Speech API</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section style="margin-bottom: 30px;">
+                <h2 style="color: #3498db; margin-bottom: 15px;">Benefits</h2>
+                <div style="line-height: 1.8; color: #555;">
+                    <ul style="list-style-position: inside;">
+                        <li>Practice unlimited interviews in a safe environment</li>
+                        <li>Get real-time feedback on your emotional state</li>
+                        <li>Improve your body language and posture</li>
+                        <li>Build confidence before real job interviews</li>
+                        <li>Review your performance and track improvements</li>
+                        <li>Completely private and secure</li>
+                    </ul>
+                </div>
+            </section>
+
+            <div style="text-align: center; margin-top: 40px;">
+                <a href="#" id="ctaButton" class="cta-button">Start Practicing Now</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        // Check authentication and adjust UI
+        window.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth(true); // Skip redirect
+
+            const ctaButton = document.getElementById('ctaButton');
+            const logoutLink = document.getElementById('logoutLink');
+
+            if (user) {
+                // User is authenticated - link to start interview
+                ctaButton.href = 'start_interview.html';
+                ctaButton.textContent = 'Start Practicing Now';
+            } else {
+                // User not authenticated - link to signup
+                ctaButton.href = 'signup.html';
+                ctaButton.textContent = 'Sign Up to Get Started';
+
+                // Hide logout link, show login
+                logoutLink.innerHTML = '<a href="login.html">Login</a>';
+            }
+        });
+    </script>
+</body>
+</html>

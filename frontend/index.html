@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Interview Platform</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Hero Section -->
+    <section class="hero">
+        <h1>Welcome to AI Interview Platform</h1>
+        <p>Practice interviews with AI-powered feedback</p>
+        <div class="hero-buttons">
+            <a href="signup.html" class="btn-primary">Get Started</a>
+            <a href="login.html" class="btn-secondary">Login</a>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <h2>Why Choose Our Platform?</h2>
+        <div class="feature-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🎤</div>
+                <h3>Voice-Based Interviews</h3>
+                <p>Conduct realistic interviews using voice interaction - no typing required!</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">😊</div>
+                <h3>Emotion Tracking</h3>
+                <p>Real-time emotion detection helps you understand your interview performance.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🧍</div>
+                <h3>Posture Analysis</h3>
+                <p>Get feedback on your body language and posture during the interview.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3>AI-Powered Questions</h3>
+                <p>Dynamic interview questions tailored to your target job role.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer style="text-align: center; padding: 40px 20px; background: #2c3e50; color: white;">
+        <p>&copy; 2025 AI Interview Platform. All rights reserved.</p>
+    </footer>
+
+    <script src="js/auth.js"></script>
+    <script>
+        // Check if user is already logged in
+        window.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth(true); // Skip redirect
+            if (user) {
+                // User is already logged in, redirect to home
+                window.location.href = 'home.html';
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - AI Interview Platform</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="form-container">
+        <h1>Login</h1>
+        <form id="loginForm">
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Password" required>
+            <div id="error-message" style="display: none;"></div>
+            <button type="submit" id="submitBtn">Login</button>
+        </form>
+        <div class="form-links">
+            <p><a href="signup.html">Don't have an account? Sign up</a></p>
+            <p><a href="forgot_password.html">Forgot password?</a></p>
+            <p><a href="index.html">Back to Home</a></p>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        const form = document.getElementById('loginForm');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+
+            // Client-side validation
+            if (!email || !validateEmail(email)) {
+                displayError('error-message', 'Please enter a valid email address');
+                return;
+            }
+
+            if (!password) {
+                displayError('error-message', 'Please enter your password');
+                return;
+            }
+
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Logging in...';
+
+            try {
+                const response = await fetch(`${BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Store user data in sessionStorage
+                    sessionStorage.setItem('user', JSON.stringify(data.user));
+
+                    // Redirect to home
+                    window.location.href = 'home.html';
+                } else {
+                    // Display error
+                    displayError('error-message', data.error || 'Login failed. Please try again.');
+
+                    // Clear password field
+                    document.getElementById('password').value = '';
+
+                    // Re-enable submit button
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Login';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                displayError('error-message', 'Connection error. Please check your network.');
+
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Login';
+            }
+        });
+    </script>
+</body>
+</html>

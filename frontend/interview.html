@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview in Progress</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="fullscreen-interview">
+    <!-- NO NAVIGATION BAR -->
+
+    <!-- Full-screen webcam video -->
+    <video id="webcamVideo" autoplay muted></video>
+
+    <!-- AI Overlay (bottom-right corner) -->
+    <div id="aiOverlay">
+        <div class="emotion-display">
+            Emotion: <span id="emotionLabel">neutral</span> (<span id="emotionConfidence">0</span>%)
+        </div>
+        <div class="posture-display">
+            Posture: <span id="postureLabel">Good</span> <span id="postureEmoji">🧍</span>
+        </div>
+    </div>
+
+    <!-- MediaPipe Pose CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+
+    <!-- JavaScript modules -->
+    <script src="js/auth.js"></script>
+    <script src="js/ai_overlay.js"></script>
+    <script src="js/interview.js"></script>
+</body>
+</html>

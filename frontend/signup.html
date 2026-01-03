@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - AI Interview Platform</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="form-container">
+        <h1>Sign Up</h1>
+        <form id="signupForm">
+            <input type="text" id="fullName" placeholder="Full Name" required minlength="2">
+            <input type="email" id="email" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Password" required minlength="8">
+            <input type="password" id="confirmPassword" placeholder="Confirm Password" required>
+            <p class="small-text">Must be at least 8 characters</p>
+            <div id="error-message" style="display: none;"></div>
+            <div id="success-message" style="display: none;"></div>
+            <button type="submit" id="submitBtn">Sign Up</button>
+        </form>
+        <div class="form-links">
+            <p><a href="login.html">Already have an account? Login</a></p>
+            <p><a href="index.html">Back to Home</a></p>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        const form = document.getElementById('signupForm');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const fullName = document.getElementById('fullName').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            // Client-side validation
+            if (!fullName || fullName.length < 2) {
+                displayError('error-message', 'Full name must be at least 2 characters');
+                return;
+            }
+
+            if (!email || !validateEmail(email)) {
+                displayError('error-message', 'Please enter a valid email address');
+                return;
+            }
+
+            if (!password || password.length < 8) {
+                displayError('error-message', 'Password must be at least 8 characters');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                displayError('error-message', 'Passwords do not match');
+                return;
+            }
+
+            // Disable submit button
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Creating account...';
+
+            try {
+                const response = await fetch(`${BASE_URL}/auth/signup`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        email,
+                        password,
+                        full_name: fullName
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    // Display success message
+                    displaySuccess('success-message', 'Account created! Redirecting to login...');
+
+                    // Wait 2 seconds then redirect
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
+                } else {
+                    // Display error
+                    displayError('error-message', data.error || 'Signup failed. Please try again.');
+
+                    // Clear password fields
+                    document.getElementById('password').value = '';
+                    document.getElementById('confirmPassword').value = '';
+
+                    // Re-enable submit button
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Sign Up';
+                }
+            } catch (error) {
+                console.error('Signup error:', error);
+                displayError('error-message', 'Connection error. Please check your network.');
+
+                // Re-enable submit button
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Sign Up';
+            }
+        });
+    </script>
+</body>
+</html>

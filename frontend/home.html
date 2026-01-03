@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home - AI Interview Platform</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav>
+        <div class="nav-brand">AI Interview</div>
+        <ul class="nav-menu">
+            <li><a href="home.html">Home</a></li>
+            <li><a href="start_interview.html">Start Interview</a></li>
+            <li><a href="about.html">About</a></li>
+            <li><a href="previous_interviews.html">Previous Interviews</a></li>
+            <li><a href="#" onclick="logout(); return false;">Logout</a></li>
+        </ul>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Welcome Section -->
+        <div class="welcome-section">
+            <h1 id="welcomeMessage">Welcome back!</h1>
+            <p>Ready to practice your interview skills?</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3 id="totalInterviews">0</h3>
+                <p>Total Interviews</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="lastInterview">None yet</h3>
+                <p>Last Interview</p>
+            </div>
+            <div class="stat-card">
+                <h3 id="avgEmotion">N/A</h3>
+                <p>Recent Performance</p>
+            </div>
+        </div>
+
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 40px 0;">
+            <a href="start_interview.html" class="cta-button">Start New Interview</a>
+        </div>
+
+        <!-- Recent Interviews -->
+        <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <h2 style="margin-bottom: 20px;">Recent Interviews</h2>
+            <div id="recentInterviews">
+                <p style="color: #7f8c8d;">No interviews yet. Start your first interview!</p>
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <a href="previous_interviews.html" style="color: #3498db; text-decoration: none;">View All Interviews →</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+    <script>
+        let currentUser = null;
+
+        // Initialize page
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Check authentication
+            currentUser = await checkAuth();
+
+            if (currentUser) {
+                // Update welcome message
+                document.getElementById('welcomeMessage').textContent = `Welcome back, ${currentUser.full_name}!`;
+
+                // Load interview history
+                await loadInterviewHistory();
+            }
+        });
+
+        async function loadInterviewHistory() {
+            try {
+                const response = await fetch(`${BASE_URL}/api/interview/history`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    const interviews = data.interviews;
+
+                    // Update stats
+                    document.getElementById('totalInterviews').textContent = interviews.length;
+
+                    if (interviews.length > 0) {
+                        // Last interview date
+                        const lastDate = new Date(interviews[0].started_at);
+                        document.getElementById('lastInterview').textContent = lastDate.toLocaleDateString();
+
+                        // Average emotion (most common)
+                        const emotions = interviews.map(i => i.overall_emotion);
+                        const mostCommon = getMostFrequent(emotions);
+                        document.getElementById('avgEmotion').textContent = mostCommon;
+
+                        // Display recent interviews (last 3)
+                        displayRecentInterviews(interviews.slice(0, 3));
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to load interview history:', error);
+            }
+        }
+
+        function getMostFrequent(arr) {
+            const counts = {};
+            let maxCount = 0;
+            let mostFrequent = 'N/A';
+
+            for (const item of arr) {
+                counts[item] = (counts[item] || 0) + 1;
+                if (counts[item] > maxCount) {
+                    maxCount = counts[item];
+                    mostFrequent = item;
+                }
+            }
+
+            return mostFrequent;
+        }
+
+        function displayRecentInterviews(interviews) {
+            const container = document.getElementById('recentInterviews');
+
+            if (interviews.length === 0) {
+                return;
+            }
+
+            container.innerHTML = interviews.map(interview => {
+                const date = new Date(interview.started_at);
+                return `
+                    <div class="interview-card" style="margin-bottom: 15px;">
+                        <h3>${interview.job_role}</h3>
+                        <p>Date: ${date.toLocaleDateString()} ${date.toLocaleTimeString()}</p>
+                        <p>Emotion: <strong>${interview.overall_emotion}</strong></p>
+                        <p>Posture: <strong>${interview.overall_posture}</strong></p>
+                    </div>
+                `;
+            }).join('');
+        }
+    </script>
+</body>
+</html>
